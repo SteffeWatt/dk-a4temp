@@ -23,10 +23,32 @@ public class TCPClient {
      * @return True on success, false otherwise
      */
     public boolean connect(String host, int port) {
-        // TODO Step 1: implement this method
+        // Step 1: implement this method
         // Hint: Remember to process all exceptions and return false on error
         // Hint: Remember to set up all the necessary input/output stream variables
-        return false;
+        
+        try {
+            //Connecting to the socket of the server
+            connection = new Socket(host, port);
+            
+            //retrieving the input stream from the socket
+            InputStreamReader inputStreamReader = new InputStreamReader(connection.getInputStream());
+            //retrieving the output stream from the socket
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(connection.getOutputStream());
+            
+            //Setting up the reader to the input stream
+            fromServer = new BufferedReader(inputStreamReader);
+            //Setting up the writer to the output stream
+            toServer = new PrintWriter(outputStreamWriter);
+            
+        } catch (IOException ioException) {
+
+            System.out.println("ERROR: Something went wrong when connecting to the server");
+            ioException.printStackTrace();
+            return false;
+        }
+        
+        return true;
     }
 
     /**
