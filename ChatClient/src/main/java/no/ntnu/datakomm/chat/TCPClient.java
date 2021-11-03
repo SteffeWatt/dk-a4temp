@@ -2,6 +2,7 @@ package no.ntnu.datakomm.chat;
 
 import java.io.*;
 import java.net.*;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -13,6 +14,9 @@ public class TCPClient {
     //Adding the different streams
     private InputStreamReader inputStreamReader;
     private OutputStreamWriter outputStreamWriter;
+    
+    //The List of valid commands
+    private static final List<String> validCommands = Arrays.asList("login", "async", "sync", "msg", "privmsg", "inbox", "help");
 
     // Hint: if you want to store a message for the last error, store it here
     private String lastError = null;
@@ -120,11 +124,39 @@ public class TCPClient {
      * @return true on success, false otherwise
      */
     private boolean sendCommand(String cmd) {
-        // TODO Step 2: Implement this method
+        // Step 2: Implement this method
         // Hint: Remember to check if connection is active
-        return false;
+        
+        //A list of all valid commands
+        //List<String> validCommands = Arrays.asList("login", "async", "sync", "msg", "privmsg", "inbox", "help");
+        
+        
+        //Check if the connection is active
+        if (isConnectionActive()) {
+            
+            //Check if the command is valid
+            if (validCommands.contains(cmd)) {
+                
+                //write the command to the writer
+                toServer.write(cmd + " ");
+                //Return true since the command is valid and written down
+                log("Command: " + cmd);
+                return true;
+                
+            } else {
+                
+                log("ERROR: The command is not valid");
+                return false;
+            }
+            
+        } else {
+            log("ERROR: The Connection is NOT active");
+            return false;
+        }
+
     }
 
+    
     /**
      * Send a public message to all the recipients.
      *
@@ -132,10 +164,33 @@ public class TCPClient {
      * @return true if message sent, false on error
      */
     public boolean sendPublicMessage(String message) {
-        // TODO Step 2: implement this method
+        // Step 2: implement this method
         // Hint: Reuse sendCommand() method
-        // Hint: update lastError if you want to store the reason for the error.
-        return false;
+        //  TODO Hint: update lastError if you want to store the reason for the error.
+        
+        //Checks if the connection is active
+        if (isConnectionActive()) {
+            
+            //Send the command "msg"
+            sendCommand("msg");
+            
+            //Write the message to the server
+            toServer.write(message);
+            
+            //Prints/Sends the messages as a single line
+            toServer.println();
+            
+            //flushes the printWriter
+            toServer.flush();
+            
+            //Document the progress
+            log("Sending to Server: " + "msg " + message);
+            
+            //Return true since the message is sent
+            return true;
+            
+        } else return false;
+
     }
 
     /**
