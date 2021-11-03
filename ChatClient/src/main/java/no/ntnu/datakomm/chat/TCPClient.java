@@ -9,6 +9,10 @@ public class TCPClient {
     private PrintWriter toServer;
     private BufferedReader fromServer;
     private Socket connection;
+    
+    //Adding the different streams
+    private InputStreamReader inputStreamReader;
+    private OutputStreamWriter outputStreamWriter;
 
     // Hint: if you want to store a message for the last error, store it here
     private String lastError = null;
@@ -32,14 +36,16 @@ public class TCPClient {
             connection = new Socket(host, port);
             
             //retrieving the input stream from the socket
-            InputStreamReader inputStreamReader = new InputStreamReader(connection.getInputStream());
+            inputStreamReader = new InputStreamReader(connection.getInputStream());
             //retrieving the output stream from the socket
-            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(connection.getOutputStream());
+            outputStreamWriter = new OutputStreamWriter(connection.getOutputStream());
             
             //Setting up the reader to the input stream
             fromServer = new BufferedReader(inputStreamReader);
             //Setting up the writer to the output stream
             toServer = new PrintWriter(outputStreamWriter);
+            
+            log("Connection Success");
             
         } catch (IOException ioException) {
 
@@ -61,8 +67,43 @@ public class TCPClient {
      * that no two threads call this method in parallel.
      */
     public synchronized void disconnect() {
-        // TODO Step 4: implement this method
+        // Step 4: implement this method
         // Hint: remember to check if connection is active
+        
+        try {
+            
+            //Closing the socket
+            if (isConnectionActive()) {
+                connection.close();
+            }
+            
+            //Closing the Input StreamReader
+            if (inputStreamReader != null) {
+                inputStreamReader.close();
+            }
+            
+            //Closing the Output StreamReader
+            if (outputStreamWriter != null) {
+                outputStreamWriter.close();
+            }
+            
+            //Closing the buffReader
+            if (fromServer != null) {
+                fromServer.close();
+            }
+            
+            //Closing the buffWriter
+            if (toServer != null) {
+                toServer.close();
+            }
+            
+            log("Disconnect Success");
+            
+        } catch (IOException ioException) {
+            System.out.println("ERROR: Something went wrong when disconnecting from the server");
+            ioException.printStackTrace();
+        }
+        
     }
 
     /**
@@ -222,6 +263,16 @@ public class TCPClient {
      */
     public void removeListener(ChatListener listener) {
         listeners.remove(listener);
+    }
+
+    /**
+     * Log a message to the system console.
+     *
+     * @param message The message to be logged (printed).
+     */
+    private static void log(String message) {
+        String threadId = "THREAD #" + Thread.currentThread().getId() + ": ";
+        System.out.println(threadId + message);
     }
 
 
