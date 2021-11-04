@@ -71,9 +71,10 @@ public class GUIController implements ChatListener {
      * Called by the FXML loader after the labels declared above are injected:
      */
     public void initialize() {
+        //Note if you want to use the manual server you have to start the manualServer before the App class
         tcpClient = new TCPClient();
-        hostInput.setText("datakomm.work");
-        portInput.setText("1300");
+        hostInput.setText("localhost"); //datakomm.work
+        portInput.setText("1234"); //1300
         textOutput.heightProperty().addListener((observable, oldValue, newValue)
                 -> outputScroll.setVvalue(1.0));
         setKeyAndClickListeners();
