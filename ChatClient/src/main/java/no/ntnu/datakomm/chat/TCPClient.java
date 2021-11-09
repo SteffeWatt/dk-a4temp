@@ -166,7 +166,7 @@ public class TCPClient {
     public boolean sendPublicMessage(String message) {
         // Step 2: implement this method
         // Hint: Reuse sendCommand() method
-        //  TODO Hint: update lastError if you want to store the reason for the error.
+        // Hint: update lastError if you want to store the reason for the error.
         
         //Checks if the connection is active
         if (isConnectionActive()) {
@@ -189,7 +189,10 @@ public class TCPClient {
             //Return true since the message is sent
             return true;
             
-        } else return false;
+        } else {
+            lastError = "Error: Failed to send a public messages";
+            return false;
+        }
 
     }
 
@@ -230,6 +233,8 @@ public class TCPClient {
         // TODO Step 5: implement this method
         // Hint: Use Wireshark and the provided chat client reference app to find out what commands the
         // client and server exchange for user listing.
+        
+        
     }
 
     /**
@@ -329,12 +334,37 @@ public class TCPClient {
      */
     private void parseIncomingCommands() {
         while (isConnectionActive()) {
-            // TODO Step 3: Implement this method
+            // Step 3: Implement this method
             // Hint: Reuse waitServerResponse() method
             // Hint: Have a switch-case (or other way) to check what type of response is received from the server
             // and act on it.
             // Hint: In Step 3 you need to handle only login-related responses.
             // Hint: In Step 3 reuse onLoginResult() method
+            
+            String msgFromServer = waitServerResponse();
+            
+            //handles response "loginok"
+            if (msgFromServer.equals("loginok")) {
+                
+                onLoginResult(true, null);
+            }
+            
+            //handles response "loginerr <error message>"
+            if (msgFromServer.contains("loginerr")) {
+
+                //if statement to check if there is an error message
+                if (msgFromServer.contains(" ") && msgFromServer.length() > 10) {
+                    
+                    //splitting the msg from the server, we only need the error message
+                    String[] msgFromServerParts = msgFromServer.split(" ", 2);
+                    onLoginResult(false, msgFromServerParts[1]);
+
+                } else {
+                    //When there is no error message the set null as error message
+                    onLoginResult(false, null);
+                }
+            }
+            
 
             // TODO Step 5: update this method, handle user-list response from the server
             // Hint: In Step 5 reuse onUserList() method
