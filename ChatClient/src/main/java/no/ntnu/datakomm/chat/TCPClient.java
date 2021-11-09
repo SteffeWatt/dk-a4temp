@@ -199,8 +199,27 @@ public class TCPClient {
      * @param username Username to use
      */
     public void tryLogin(String username) {
-        // TODO Step 3: implement this method
+        // Step 3: implement this method
         // Hint: Reuse sendCommand() method
+        
+        if (isConnectionActive()) {
+            
+            //Send the command
+            sendCommand("login");
+            
+            //writs the username to the server
+            toServer.write(username);
+            //Sends the messages to the server
+            toServer.println();
+            //flush the writer
+            toServer.flush();
+            
+            log("Sending to Server: login " + username);
+
+        } else {
+            
+            log("Error: The login command was not sent");
+        }
     }
 
     /**
@@ -243,11 +262,41 @@ public class TCPClient {
      * @return one line of text (one command) received from the server
      */
     private String waitServerResponse() {
-        // TODO Step 3: Implement this method
+        // Step 3: Implement this method
         // TODO Step 4: If you get I/O Exception or null from the stream, it means that something has gone wrong
         // with the stream and hence the socket. Probably a good idea to close the socket in that case.
+        
+        //Is true when the client have received a response
+        boolean response = false;
+        
+        //A String containing the msg from the server
+        String msgFromServer = null;
+        
+        //Check if the connection to the server is open.
+        if (isConnectionActive()) {
+            
+            //When there is no response then keep waiting and checking every second. 
+            while (!response) {
 
-        return null;
+                try {
+                    //Waiting for the msg form the server
+                    //The code will wait here for a response
+                    msgFromServer = fromServer.readLine();
+
+                    if (!msgFromServer.isEmpty()) {
+                        
+                        log("Server: " + msgFromServer);
+                        //When you have a response stop the while loop
+                        response = true;
+                    }
+                    
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return msgFromServer;
     }
 
     /**
