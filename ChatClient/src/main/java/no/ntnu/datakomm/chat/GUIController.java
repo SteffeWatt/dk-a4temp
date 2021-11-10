@@ -73,8 +73,8 @@ public class GUIController implements ChatListener {
     public void initialize() {
         //Note if you want to use the manual server you have to start the manualServer before the App class
         tcpClient = new TCPClient();
-        hostInput.setText("localhost"); //datakomm.work
-        portInput.setText("1234"); //1300
+        hostInput.setText("datakomm.work"); //datakomm.work
+        portInput.setText("1300"); //1300
         textOutput.heightProperty().addListener((observable, oldValue, newValue)
                 -> outputScroll.setVvalue(1.0));
         setKeyAndClickListeners();

@@ -2,6 +2,7 @@ package no.ntnu.datakomm.chat;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -16,7 +17,7 @@ public class TCPClient {
     private OutputStreamWriter outputStreamWriter;
     
     //The List of valid commands
-    private static final List<String> validCommands = Arrays.asList("login", "async", "sync", "msg", "privmsg", "inbox", "help");
+    private static final List<String> validCommands = Arrays.asList("login", "async", "sync", "msg", "privmsg", "inbox", "help", "users");
 
     // Hint: if you want to store a message for the last error, store it here
     private String lastError = null;
@@ -117,6 +118,7 @@ public class TCPClient {
      * @return true if the connection is active (opened), false if not.
      */
     public boolean isConnectionActive() {
+        
         return connection != null;
     }
 
@@ -131,7 +133,7 @@ public class TCPClient {
         // Hint: Remember to check if connection is active
         
         //A list of all valid commands
-        //List<String> validCommands = Arrays.asList("login", "async", "sync", "msg", "privmsg", "inbox", "help");
+        //List<String> validCommands = Arrays.asList("login", "async", "sync", "msg", "privmsg", "inbox", "help", "users");
         
         
         //Check if the connection is active
@@ -141,7 +143,7 @@ public class TCPClient {
             if (validCommands.contains(cmd)) {
                 
                 //write the command to the writer
-                toServer.write(cmd + " ");
+                toServer.write(cmd);
                 //Return true since the command is valid and written down
                 log("Command: " + cmd);
                 return true;
@@ -175,22 +177,26 @@ public class TCPClient {
         if (isConnectionActive()) {
             
             //Send the command "msg"
-            sendCommand("msg");
-            
-            //Write the message to the server
-            toServer.write(message);
-            
-            //Prints/Sends the messages as a single line
-            toServer.println();
-            
-            //flushes the printWriter
-            toServer.flush();
-            
-            //Document the progress
-            log("Sending to Server: " + "msg " + message);
-            
-            //Return true since the message is sent
-            return true;
+            if (sendCommand("msg")) {
+                
+                //Write the message to the server
+                toServer.write(" " + message);
+
+                //Prints/Sends the messages as a single line
+                toServer.println();
+
+                //flushes the printWriter
+                toServer.flush();
+
+                //Document the progress
+                log("Sending to Server: " + "msg " + message);
+
+                //Return true since the message is sent
+                return true;
+            } else {
+                lastError = "Error: Command was not valid";
+                return false;
+            }
             
         } else {
             lastError = "Error: Failed to send a public messages";
@@ -209,18 +215,19 @@ public class TCPClient {
         // Hint: Reuse sendCommand() method
         
         if (isConnectionActive()) {
-            
+
             //Send the command
-            sendCommand("login");
-            
-            //writs the username to the server
-            toServer.write(username);
-            //Sends the messages to the server
-            toServer.println();
-            //flush the writer
-            toServer.flush();
-            
-            log("Sending to Server: login " + username);
+            if (sendCommand("login")) {
+                
+                //writs the username to the server
+                toServer.write(" " + username);
+                //Sends the messages to the server
+                toServer.println();
+                //flush the writer
+                toServer.flush();
+
+                log("Sending to Server: login " + username);
+            }
 
         } else {
             
@@ -233,11 +240,21 @@ public class TCPClient {
      * clear your current user list and use events in the listener.
      */
     public void refreshUserList() {
-        // TODO Step 5: implement this method
+        // Step 5: implement this method
         // Hint: Use Wireshark and the provided chat client reference app to find out what commands the
         // client and server exchange for user listing.
         
+        //There is a command called "users"
+        //the client sends "users" to the server and receives "users <list of users>"
+        //<list of users> is a username followed by a new username, there is only a space between each username
         
+        if (sendCommand("users")) {
+            toServer.println();
+            toServer.flush();
+        }
+        
+        //Clearing the user lists
+        onUsersList(new String[0]);
     }
 
     /**
@@ -289,17 +306,19 @@ public class TCPClient {
                 try {
                     //Waiting for the msg form the server
                     //The code will wait here for a response
-                    msgFromServer = fromServer.readLine();
+                    
+                    if (isConnectionActive()) msgFromServer = fromServer.readLine(); {
+                        //msgFromServer = fromServer.readLine();
 
-                    if (!msgFromServer.isEmpty()) {
-                        
-                        log("Server: " + msgFromServer);
-                        //When you have a response stop the while loop
-                        response = true;
+                        if (!msgFromServer.isEmpty()) {
+
+                            log("Server: " + msgFromServer);
+                            //When you have a response stop the while loop
+                            response = true;
+                        }
                     }
                     
                 } catch (IOException e) {
-                    e.printStackTrace();
                     //closing the socket because something have gone wrong with the socket
                     disconnect();
                 }
@@ -373,8 +392,32 @@ public class TCPClient {
             }
             
 
-            // TODO Step 5: update this method, handle user-list response from the server
+            // Step 5: update this method, handle user-list response from the server
             // Hint: In Step 5 reuse onUserList() method
+            
+            //handle response users <usernames>
+            if (msgFromServer.contains("users")) {
+                
+                //Example: "users name1 name3 user4"
+                
+                //Split msg from the server
+                String[] userListParts = msgFromServer.split(" ");
+                
+                //Make the array string to a list
+                ArrayList<String> userList = new ArrayList<>(Arrays.asList(userListParts));
+                //ArrayList<String> userList = new ArrayList<>(List.of(msgFromServer.split(" ")));
+                
+                //removing "users" from the array list, so it only contains usernames
+                userList.remove(0);
+                
+                //Sends the list to onUsersList
+                //Converting the list to an array again
+                onUsersList(userList.toArray(new String[0]));
+                
+                
+                
+            }
+            
 
             // TODO Step 7: add support for incoming chat messages from other users (types: msg, privmsg)
             // TODO Step 7: add support for incoming message errors (type: msgerr)
@@ -454,7 +497,11 @@ public class TCPClient {
      * @param users List with usernames
      */
     private void onUsersList(String[] users) {
-        // TODO Step 5: Implement this method
+        // Step 5: Implement this method
+        
+        for (ChatListener chatListener : listeners) {
+            chatListener.onUserList(users);
+        }
     }
 
     /**
