@@ -101,6 +101,9 @@ public class TCPClient {
                 toServer.close();
             }
             
+            //notify the listeners that connection is closed
+            onDisconnect();
+            
             log("Disconnect Success");
             
         } catch (IOException ioException) {
@@ -268,7 +271,7 @@ public class TCPClient {
      */
     private String waitServerResponse() {
         // Step 3: Implement this method
-        // TODO Step 4: If you get I/O Exception or null from the stream, it means that something has gone wrong
+        // Step 4: If you get I/O Exception or null from the stream, it means that something has gone wrong
         // with the stream and hence the socket. Probably a good idea to close the socket in that case.
         
         //Is true when the client have received a response
@@ -297,8 +300,12 @@ public class TCPClient {
                     
                 } catch (IOException e) {
                     e.printStackTrace();
+                    //closing the socket because something have gone wrong with the socket
+                    disconnect();
                 }
             }
+        } else {
+            disconnect();
         }
 
         return msgFromServer;
@@ -433,8 +440,12 @@ public class TCPClient {
      * Internet error)
      */
     private void onDisconnect() {
-        // TODO Step 4: Implement this method
+        // Step 4: Implement this method
         // Hint: all the onXXX() methods will be similar to onLoginResult()
+        
+        for (ChatListener chatListener : listeners) {
+            chatListener.onDisconnect();
+        }
     }
 
     /**
