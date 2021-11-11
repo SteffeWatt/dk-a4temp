@@ -119,7 +119,14 @@ public class TCPClient {
      */
     public boolean isConnectionActive() {
         
-        return connection != null;
+        //Checks if there is/has been a successful connection 
+        // and check that the socket is not closed.
+        if (connection != null) {
+            if (connection.isConnected() && !connection.isClosed()) {
+                return true;
+
+            } else return false;
+        } else return false;
     }
 
     /**
@@ -244,9 +251,11 @@ public class TCPClient {
         // Hint: Use Wireshark and the provided chat client reference app to find out what commands the
         // client and server exchange for user listing.
         
+        //The ip was 142.93.163.244
         //There is a command called "users"
         //the client sends "users" to the server and receives "users <list of users>"
         //<list of users> is a username followed by a new username, there is only a space between each username
+        
         
         if (sendCommand("users")) {
             toServer.println();
@@ -265,10 +274,47 @@ public class TCPClient {
      * @return true if message sent, false on error
      */
     public boolean sendPrivateMessage(String recipient, String message) {
-        // TODO Step 6: Implement this method
+        // Step 6: Implement this method
         // Hint: Reuse sendCommand() method
         // Hint: update lastError if you want to store the reason for the error.
-        return false;
+
+        //how the message need to look: privmsg <recipient> <message>
+        //Example: privmsg Harald Hello!
+
+        String cmd = "privmsg";
+
+        //Checks if the connection is active
+        if (isConnectionActive()) {
+
+            //Send the command "privmsg"
+            if (sendCommand(cmd)) {
+
+                //Send the <recipient> with a space in front
+                toServer.write(" " + recipient);
+
+                //Send the message with a space in front
+                toServer.write(" " + message);
+
+                //ends the line and sends the message
+                toServer.println();
+
+                //flushes the printWriter
+                toServer.flush();
+
+                //log
+                log("Sending to Server: " + cmd + " " + recipient + " " + message);
+
+                //Returning true since the message has been sent
+                return true;
+
+            } else {
+                lastError = "Error: Command was not valid, when sending a private msg";
+                return false;
+            }
+        } else {
+            lastError = "Error: Failed to send private msg";
+            return false;
+        }
     }
 
 
@@ -310,7 +356,7 @@ public class TCPClient {
                     if (isConnectionActive()) msgFromServer = fromServer.readLine(); {
                         //msgFromServer = fromServer.readLine();
 
-                        if (!msgFromServer.isEmpty()) {
+                        if (msgFromServer != null && !msgFromServer.isEmpty()) {
 
                             log("Server: " + msgFromServer);
                             //When you have a response stop the while loop
@@ -320,7 +366,9 @@ public class TCPClient {
                     
                 } catch (IOException e) {
                     //closing the socket because something have gone wrong with the socket
-                    disconnect();
+                    if (isConnectionActive()) {
+                        disconnect();
+                    }
                 }
             }
         } else {
