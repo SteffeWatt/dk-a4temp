@@ -18,6 +18,15 @@ public class TCPClient {
     
     //The List of valid commands
     private static final List<String> validCommands = Arrays.asList("login", "async", "sync", "msg", "privmsg", "inbox", "help", "users");
+    //The different server's response commands
+    private static final String cmdLoginOk = "loginok";
+    private static final String cmdLoginError = "loginerr";
+    private static final String cmdUsers = "users";
+    private static final String cmdMsgOk = "msgok";
+    private static final String cmdMsgError = "msgerr";
+    private static final String cmdMsg = "msg";
+    private static final String cmdMsgPrivate = "privmsg";
+    private static final String cmdError = "cmderr";
 
     // Hint: if you want to store a message for the last error, store it here
     private String lastError = null;
@@ -407,6 +416,10 @@ public class TCPClient {
      * the connection is closed.
      */
     private void parseIncomingCommands() {
+        
+        //The different serve commands
+        
+
         while (isConnectionActive()) {
             // Step 3: Implement this method
             // Hint: Reuse waitServerResponse() method
@@ -416,25 +429,37 @@ public class TCPClient {
             // Hint: In Step 3 reuse onLoginResult() method
             
             String msgFromServer = waitServerResponse();
+            String serverCommand; //The command from the server ("loginok, loginerr ...")
+            String[] msgFromServerTwoParts = null;
+            
+            //Retrieving the command
+            if (msgFromServer.contains(" ")) {
+                //Splitting the msg to view the command alone
+                msgFromServerTwoParts = msgFromServer.split(" ", 2);
+                serverCommand = msgFromServerTwoParts[0];
+            } else {
+                //If there is no space in the msg that it only contains the command
+                serverCommand = msgFromServer;
+            }
+            
+            log("Handling msg from server as command: " + serverCommand);
             
             //handles response "loginok"
-            if (msgFromServer.equals("loginok")) {
+            if (serverCommand.equals(cmdLoginOk)) {
                 
                 onLoginResult(true, null);
             }
             
+            
             //handles response "loginerr <error message>"
-            if (msgFromServer.contains("loginerr")) {
-
-                //if statement to check if there is an error message
-                if (msgFromServer.contains(" ") && msgFromServer.length() > 10) {
+            if (serverCommand.equals(cmdLoginError)) {
+                
+                //Checks if there is an error msg
+                if (msgFromServerTwoParts != null) {
+                    onLoginResult(false, msgFromServerTwoParts[1]);
                     
-                    //splitting the msg from the server, we only need the error message
-                    String[] msgFromServerParts = msgFromServer.split(" ", 2);
-                    onLoginResult(false, msgFromServerParts[1]);
-
+                    //if not then there is no error msg
                 } else {
-                    //When there is no error message the set null as error message
                     onLoginResult(false, null);
                 }
             }
@@ -444,33 +469,89 @@ public class TCPClient {
             // Hint: In Step 5 reuse onUserList() method
             
             //handle response users <usernames>
-            if (msgFromServer.contains("users")) {
+            if (serverCommand.equals(cmdUsers)) {
                 
                 //Example: "users name1 name3 user4"
                 
                 //Split msg from the server
-                String[] userListParts = msgFromServer.split(" ");
-                
-                //Make the array string to a list
-                ArrayList<String> userList = new ArrayList<>(Arrays.asList(userListParts));
-                //ArrayList<String> userList = new ArrayList<>(List.of(msgFromServer.split(" ")));
-                
-                //removing "users" from the array list, so it only contains usernames
-                userList.remove(0);
+                String[] userListParts = new String[0];
+                if (msgFromServerTwoParts != null) {
+                    //retrieving the msg after the command and splitting it
+                    userListParts = msgFromServerTwoParts[1].split(" ");
+                }
                 
                 //Sends the list to onUsersList
-                //Converting the list to an array again
-                onUsersList(userList.toArray(new String[0]));
-                
-                
-                
+                onUsersList(userListParts);
             }
             
-
-            // TODO Step 7: add support for incoming chat messages from other users (types: msg, privmsg)
-            // TODO Step 7: add support for incoming message errors (type: msgerr)
-            // TODO Step 7: add support for incoming command errors (type: cmderr)
+            // Step 7: add support for incoming chat messages from other users (types: msg, privmsg)
+            // Step 7: add support for incoming message errors (type: msgerr)
+            // Step 7: add support for incoming command errors (type: cmderr)
             // Hint for Step 7: call corresponding onXXX() methods which will notify all the listeners
+            
+            //handles responses "msg"
+            if (serverCommand.contains(cmdMsg)) {
+                
+                //String[] msgPartsArray = msgFromServer.split(" ", 2);       
+                
+                //msgCommand can be msgok, msgerr, msg or privmsg 
+                //String msgCommand = msgPartsArray[0];
+                
+                //handles "msgok"
+                if (serverCommand.equals(cmdMsgOk)) {
+                    
+                    //The message sent was approved by the server
+                    //There is nothing that need to be done.
+                }
+                
+                
+                //handles "msgerr <error description>"
+                if (serverCommand.equals(cmdMsgError)) {
+                    
+                    //Retrieving the error message and try to notify the listeners
+                    onMsgError(msgFromServerTwoParts[1]);
+                    lastError = "Something went wrong with the last private/Global message sent from this client";
+                    
+                }
+                
+                //handles "msg <sender> <message>" and
+                //handles "privmsg <sender> <message>"
+                if ((serverCommand.equals(cmdMsg) || serverCommand.equals(cmdMsgPrivate)) 
+                        && msgFromServerTwoParts != null) {
+                    
+                    //Note: msgFromServerTwoParts[1] = <sender> <message>
+                    String[] msgSmallerParts = msgFromServerTwoParts[1].split(" ", 2);
+                    
+                    //Note: msgSmallerParts[<sender>, <message>]
+                    String msgSender = msgSmallerParts[0];
+                    String msgMessage = msgSmallerParts[1];
+
+
+                    //Updating the new message
+                    if (serverCommand.equals(cmdMsg)) {
+                        
+                        //Global msg
+                        onMsgReceived(false, msgSender, msgMessage);
+                        
+                    } else { //The only other option is that the command is "privmsg"
+                        
+                        //private msg
+                        onMsgReceived(true, msgSender, msgMessage);
+                    }
+                }
+            }
+
+            //handles response "cmderr"
+            if (serverCommand.equals(cmdError) && msgFromServerTwoParts != null) {
+                
+                //Retrieving the error message and
+                //try to notify the listeners
+                onCmdError(msgFromServerTwoParts[1]);
+            }
+
+            
+            
+            
 
             // TODO Step 8: add support for incoming supported command list (type: supported)
 
@@ -560,7 +641,19 @@ public class TCPClient {
      * @param text   Message text
      */
     private void onMsgReceived(boolean priv, String sender, String text) {
-        // TODO Step 7: Implement this method
+        // Step 7: Implement this method
+        
+        //Creates the msg as its own class
+        TextMessage textMessage = new TextMessage(sender, priv, text);
+        
+        log("Recived the msg: " + textMessage.toString());
+        
+        //Notify the listeners
+        for (ChatListener chatListener : listeners) {
+            
+            chatListener.onMessageReceived(textMessage);
+        }
+        
     }
 
     /**
@@ -569,7 +662,13 @@ public class TCPClient {
      * @param errMsg Error description returned by the server
      */
     private void onMsgError(String errMsg) {
-        // TODO Step 7: Implement this method
+        // Step 7: Implement this method
+
+        //Notify the listeners
+        for (ChatListener chatListener : listeners) {
+            //tells the listeners the error msg
+            chatListener.onMessageError(errMsg);
+        }
     }
 
     /**
@@ -578,7 +677,12 @@ public class TCPClient {
      * @param errMsg Error message
      */
     private void onCmdError(String errMsg) {
-        // TODO Step 7: Implement this method
+        // Step 7: Implement this method
+        // Notify the listeners
+        for (ChatListener chatListener : listeners) {
+            //tells the listeners the error msg
+            chatListener.onCommandError(errMsg);
+        }
     }
 
     /**
