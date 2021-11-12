@@ -27,6 +27,7 @@ public class TCPClient {
     private static final String cmdMsg = "msg";
     private static final String cmdMsgPrivate = "privmsg";
     private static final String cmdError = "cmderr";
+    private static final String cmdSupported = "supported";
 
     // Hint: if you want to store a message for the last error, store it here
     private String lastError = null;
@@ -130,11 +131,8 @@ public class TCPClient {
         
         //Checks if there is/has been a successful connection 
         // and check that the socket is not closed.
-        if (connection != null) {
-            if (connection.isConnected() && !connection.isClosed()) {
-                return true;
-
-            } else return false;
+        if ((connection != null) && (connection.isConnected() && !connection.isClosed())) {
+            return true;
         } else return false;
     }
 
@@ -149,7 +147,7 @@ public class TCPClient {
         // Hint: Remember to check if connection is active
         
         //A list of all valid commands
-        //List<String> validCommands = Arrays.asList("login", "async", "sync", "msg", "privmsg", "inbox", "help", "users");
+        //List<String> validCommands
         
         
         //Check if the connection is active
@@ -331,8 +329,23 @@ public class TCPClient {
      * Send a request for the list of commands that server supports.
      */
     public void askSupportedCommands() {
-        // TODO Step 8: Implement this method
+        // Step 8: Implement this method
         // Hint: Reuse sendCommand() method
+        
+        //Checks if the connection is active
+        if (isConnectionActive()) {
+            
+            //Send the command
+            if (sendCommand("help")) {
+                
+                //Prints/Sends the messages as a single line
+                toServer.println();
+                
+                //flushes the printWriter
+                toServer.flush();
+                
+            }
+        }
     }
 
 
@@ -548,13 +561,20 @@ public class TCPClient {
                 //try to notify the listeners
                 onCmdError(msgFromServerTwoParts[1]);
             }
-
             
+            // Step 8: add support for incoming supported command list (type: supported)
             
+            //handles response "supported"
+            //supported <cmd1> … <cmdN>
+            //Example: supported msg privmsg users help
             
-
-            // TODO Step 8: add support for incoming supported command list (type: supported)
-
+            if (serverCommand.equals(cmdSupported) && msgFromServerTwoParts != null) {
+                //support = an array with all the commands the server supports
+                String[] support = msgFromServerTwoParts[1].split(" ");
+                
+                //Sends the array to onSupported
+                onSupported(support);
+            }
         }
     }
 
@@ -692,6 +712,10 @@ public class TCPClient {
      * @param commands Commands supported by the server
      */
     private void onSupported(String[] commands) {
-        // TODO Step 8: Implement this method
+        // Step 8: Implement this method
+        
+        for (ChatListener chatListener : listeners) {
+            chatListener.onSupportedCommands(commands);
+        }
     }
 }
